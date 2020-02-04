@@ -1,0 +1,693 @@
+---
+title: "Model Factor Scores"
+author: "Robin"
+date: "9/4/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# load libraries
+library(lme4)
+library(lmerTest)
+library(AICcmodavg)
+library(bbmle)
+library (jtools)
+library(ggstance)
+library(cowplot)
+library(sjstats)
+library(dplyr)
+library(readr)
+library(broom)
+library(insight)
+library(glmmTMB)
+```
+
+Read in data 
+```{r}
+dat = read.csv('/Users/sifre002/Box/sifre002/9_ExcelSpreadsheets/Longitudinal_RBSEC/data_plus_scores.csv')
+rawdat = read.csv('/Users/sifre002/Box/sifre002/9_ExcelSpreadsheets/Longitudinal_RBSEC/2019-09-05_NOBAB_cleanData_MNLFA.csv')
+
+
+# add project and sex information 
+rawdat = rawdat %>%
+  dplyr::select(ID2, BSLERP, TABLET, MALE, PROJECT)
+rawdat = distinct(rawdat, ID2, .keep_all = TRUE)
+dat = merge(dat, rawdat, by = 'ID2', all.x = TRUE)
+
+#dat = data_plus_scores
+dat$TABLET = ifelse(dat$PROJECT == 'tablet', 1,0)
+dat$BSLERP = ifelse(dat$PROJECT == 'BSLERP', 1,0)
+
+dat$TABLET = as.factor(dat$TABLET)
+dat$AGE = dat$AGE18 + 18
+```
+
+# Plot distributions
+## Composite RBS-EC scores
+```{r}
+dat$comp_items = dat$repsum + dat$resritsum + dat$selfsum 
+p1 = ggplot(data = dat, aes(x = comp_items)) + 
+  geom_histogram(color = 'black', binwidth = 1) + 
+  scale_x_continuous(breaks = seq(0,34,2)) +
+  xlab('Composite RBS-EC Score') +
+  ylab('Frequency') +
+  theme(text = element_text(size=16)) +
+  theme_bw()
+ggsave(plot = p1, filename=  '/Users/sifre002/Box/sifre002/11_Figures/Longit_RBS_MS/hist_composite.jpg', height = 6, width = 6.5)
+```
+
+## Subscales
+```{r}
+#  Rep Motor 
+p1 = ggplot(data = dat, aes(x = as.numeric(REP_ETA1))) + 
+  geom_histogram(color = 'black', binwidth = 0.5,
+                 aes(y = ..density..) ) +
+  stat_function(fun=dnorm,
+                color="red",
+                args=list(mean=mean(dat$REP_ETA2), 
+                          sd=sd(dat$REP_ETA2))) +
+  xlab('Repetitive Motor (Factor Score)') +
+  scale_x_continuous(limits = c(-3, 3), breaks = seq(-3,3,0.5)) +
+  theme_bw() + 
+  theme(text = element_text(size=16))
+
+dat$REPT = dat$REP_ETA1^3
+p=ggplot(data = dat, aes(x = as.numeric(REPT))) + 
+    geom_histogram(color = 'black', 
+                   aes(y = ..density..) ) +
+    stat_function(fun=dnorm,
+                  color="red",
+                  args=list(mean=mean(dat$REPT), 
+                            sd=sd(dat$REPT)))
+  
+p2 = ggplot(data = dat, aes(x = as.numeric(repmean))) + 
+  geom_histogram(color = 'black', binwidth = .1,
+                 aes(y = ..density..) ) +
+  stat_function(fun=dnorm,
+                color="red",
+                args=list(mean=mean(dat$repmean), 
+                          sd=sd(dat$repmean))) +
+  xlab('Repetitive Motor (Raw Mean)') +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(-0,1,.1)) +
+  theme_bw()
+theme(text = element_text(size=16))
+
+ggsave(plot = p1, filename=  '/Users/sifre002/Box/sifre002/11_Figures/Longit_RBS_MS/hist_rep_eta.jpg', height = 6, width = 6.5)
+ggsave(plot = p2, filename=  '/Users/sifre002/Box/sifre002/11_Figures/Longit_RBS_MS/hist_rep_raw.jpg', height = 6, width = 6.5)
+
+# SELF 
+dat$SELFT = dat$SELF_ETA1 + abs( min(dat$SELF_ETA2) ) # no negs
+dat$SELFT = (dat$SELFT)^(1/2)
+
+p1 = ggplot(data = dat, aes(x = SELF_ETA1)) + 
+    geom_histogram(color = 'black', binwidth =0.5,
+                   aes(y = ..density..) ) +
+    stat_function(fun=dnorm,
+                  color="red",
+                  args=list(mean=mean(dat$SELF_ETA1), 
+                            sd=sd(dat$SELF_ETA1))) +
+  xlab('Self-directed') +
+  scale_x_continuous(limits = c(-3, 3), breaks = seq(-3,3,0.5))
+
+ggsave(plot = p1, filename=  '/Users/sifre002/Box/sifre002/11_Figures/Longit_RBS_MS/hist_self_eta.jpg', height = 6, width = 6.5)
+
+ggplot(data = dat, aes(x =SELFT)) + 
+  geom_histogram(color = 'black',  binwidth = .2,
+                 aes(y = ..density..) ) +
+  stat_function(fun=dnorm,
+                color="red",
+                args=list(mean=mean(dat$SELFT), 
+                          sd=sd(dat$SELFT))) +
+  xlab('Self-directed') 
+
+
+p2 = ggplot(data = dat, aes(x =selfmean)) + 
+  geom_histogram(color = 'black',  binwidth = .2,
+                 aes(y = ..density..) ) +
+  stat_function(fun=dnorm,
+                color="red",
+                args=list(mean=mean(dat$SELFT), 
+                          sd=sd(dat$SELFT))) +
+  xlab('Self-directed') +
+    scale_x_continuous(limits = c(-0.1, 1.1), breaks = seq(-0,1,0.2))
+
+ggsave(plot = p2, filename=  '/Users/sifre002/Box/sifre002/11_Figures/Longit_RBS_MS/hist_self_mean.jpg', height = 6, width = 6.5)
+
+
+p1 = ggplot(data = dat, aes(x = as.numeric(RIT_RES_ETA1))) + 
+  geom_histogram(color = 'black', binwidth = 0.5,
+                 aes(y = ..density..) ) +
+  stat_function(fun=dnorm,
+                color="red",
+                args=list(mean=mean(dat$RIT_RES_ETA1), 
+                          sd=sd(dat$RIT_RES_ETA1))) +
+  xlab('Higher-order') + 
+  scale_x_continuous(limits = c(-3, 3), breaks = seq(-3,3,0.5))+
+  theme_bw() +
+  theme(text = element_text(size=16))
+
+p2= ggplot(data = dat, aes(x = as.numeric(resritmean))) + 
+  geom_histogram(color = 'black', binwidth = 0.1,
+                 aes(y = ..density..) ) +
+  stat_function(fun=dnorm,
+                color="red",
+                args=list(mean=mean(dat$resritmean), 
+                          sd=sd(dat$resritmean))) +
+  xlab('Higher-order') + 
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0,1,0.1))+
+  theme_bw() +
+  theme(text = element_text(size=16))
+
+
+ggsave(plot = p1, filename=  '/Users/sifre002/Box/sifre002/11_Figures/Longit_RBS_MS/hist_higherorder_eta.jpg', height = 6, width = 6.5)
+
+ggsave(plot = p2,  filename=  '/Users/sifre002/Box/sifre002/11_Figures/Longit_RBS_MS/hist_higherorder_mean.jpg', height = 6, width = 6.5)
+```
+
+# Growth curve analyses
+## Repetitive Motor 
+### Rep - Factor scores
+```{r}
+#########################################
+# Model REP (MNLFA)
+#########################################
+# 1. Functional form - Fixed effects 
+lmer.0=lmer(REP_ETA1~ 1  +( 1|ID2), data = dat, REML = FALSE)
+lmer.1=lmer(REP_ETA1~ 1  + AGE18+ ( 1|ID2), data = dat, REML = FALSE)
+lmer.2=lmer(REP_ETA1~ 1  + AGE18+ I(AGE18^2) + ( 1 |ID2), data = dat, REML = FALSE)
+# Model comparison
+mynames <- as.character (c("lmer.0", "lmer.1", "lmer.2")) # model numbers as characters
+myaicc  <- ICtab(logLik(lmer.0),
+                 logLik(lmer.1),
+                 logLik(lmer.2),
+                 type ="AICc",
+                 nobs = nrow(na.omit(dat)),
+                 weights =TRUE,delta =TRUE,sort=TRUE,mnames=mynames,base=TRUE)
+myaicc #dAICc over 2 means significantly better
+# we select linear fixed eff for age, bc dAICc from lmer.1 to lmer.2 is 0.2 (dAICc < 2 does not justify increase in model complexity)
+
+
+# 2. Check for RE of age
+lmer.3 = lmer(REP_ETA1~ 1  + AGE18+  ( 1 +AGE18 |ID2), data = dat, REML = FALSE)
+mynames <- as.character (c("lmer.1", "lmer.3")) # model numbers as characters
+myaicc  <- ICtab(logLik(lmer.1),
+                 logLik(lmer.3),
+                 type ="AICc",
+                 nobs = nrow(na.omit(dat)),
+                 weights =TRUE,delta =TRUE,sort=TRUE,mnames=mynames,base=TRUE)
+myaicc$rweight <- max(myaicc$weight) / myaicc$weight
+myaicc #dAI
+# we select model with fixed and random linear effect of age (lmer.3)
+# change in log-likeluhood:  -720.5  - -739.6  = 19.1
+logLik(lmer.1)
+logLik(lmer.3)
+
+# 3. Assess covariates (& their interaction with age)
+lmer.4 =  lmer(REP_ETA1~ 1  + AGE18+  MALE + TABLET + ( 1 +AGE18 |ID2), data = dat, REML = FALSE)
+anova(lmer.3, lmer.4)
+lmer.5 =  lmer(REP_ETA1~ 1  + AGE18+  MALE + TABLET +
+                 AGE18*MALE + AGE18*TABLET + ( 1 +AGE18 |ID2), data = dat, REML = FALSE)
+mynames <- as.character (c("lmer.3", "lmer.4", "lmer.5")) # model numbers as characters
+myaicc  <- ICtab(logLik(lmer.3),
+                 logLik(lmer.4),
+                 logLik(lmer.5),
+                 type ="AICc",
+                 nobs = nrow(na.omit(dat)),
+                 weights =TRUE,delta =TRUE,sort=TRUE,mnames=mynames,base=TRUE)
+myaicc$rweight <- max(myaicc$weight) / myaicc$weight
+myaicc # lmer.5 suggests there is an interaction bw a covariate w/ age
+
+# remove n.s. covariates (Cohort/Tablet) & confirm that we should still keep AgexSex interaction
+lmer.6 = lmer(REP_ETA1~ 1  + AGE18+  MALE +
+                 AGE18*MALE +  ( 1 +AGE18 |ID2), data = dat, REML = FALSE)
+mynames <- as.character (c("lmer.5", "lmer.6")) # model numbers as characters
+myaicc  <- ICtab(logLik(lmer.5),
+                 logLik(lmer.6),
+                 type ="AICc",
+                 nobs = nrow(na.omit(dat)),
+                 weights =TRUE,delta =TRUE,sort=TRUE,mnames=mynames,base=TRUE)
+myaicc$rweight <- max(myaicc$weight) / myaicc$weight
+myaicc #dAICc does not justify including the more complex model (lmer.5). We stick with lmer.6. i.e. when I removed the n.s. covariates, it didn't impact model fit estimates in significant way. 
+# 4. Pseudo-r^2
+dat$repyhat = predict(lmer.6, newdata=dat, re.form = NA )
+R = cor(x = dat$repyhat, 
+        y =dat$REP_ETA1, use = "complete.obs")
+R^2 #39% of var accounted for by the model
+r2(lmer.6)
+
+
+# 5. Scaling on within-person variance
+# ICC
+summary(lmer.0)
+l1_sd = sqrt(1.1064)#  l1-var from random intercept model 
+age_eff = -0.109913 # lmer.1
+mo_18 =  0.039220 # intercept
+mo_8 =  -10*age_eff # For a ten unique DECREASE in age (to get to 8 mos)
+mo_37 =  19*age_eff
+
+(mo_37-mo_8) / l1_sd
+
+```
+
+### Rep - Raw mean scores 
+```{r}
+#If you are dealing with continuous non-negative outcome, then you could consider the Gamma distribution, or Inverse Gaussian distribution.
+# Gamma- zeros not allowed
+mean(dat$repmean)
+
+sd(dat$repmean)
+
+lm.0 = lmer(repmean ~ 1 + (1|ID2), data = dat, REML = FALSE)
+
+test = ranef(lm.0)$ID2
+var(test$`(Intercept)`) 
+sum(test$`(Intercept)`)
+
+dat$repmeant = dat$repmean + .0001 # gamma doesn't allow for zeros
+glm.0 = glmer(repmean ~ 1 + (1|ID2), data = dat, family = binomial(link = "logit"))
+glm.1 = glmer(repmean ~ 1 + AGE18 + (1|ID2), data = dat, family = binomial(link = "logit"))
+glm.2 = glmer(repmean ~ 1 + AGE18 + I(AGE18^2) + (1|ID2), data = dat, family = binomial(link = "logit"))
+
+mynames <- as.character (c("glm.0", "glm.1", "glm.2")) # model numbers as characters
+
+myaicc  <- ICtab(logLik(glm.0),
+                 logLik(glm.1),
+                 logLik(glm.2),
+                 type ="AICc",
+                 nobs = nrow(na.omit(dat)),
+                 weights =TRUE,delta =TRUE,sort=TRUE,mnames=mynames,base=TRUE)
+myaicc$rweight <- round(max(myaicc$weight) / myaicc$weight,2)
+myaicc #dAICc over 2 means significantly better
+
+# Random effects
+# Both models failed to converge, so we cannot model random effects 
+glm.3 = glmer(repmean ~ 1 + AGE18 + I(AGE18^2) + (1 + AGE18|ID2), data = dat, family = binomial(link = "logit"))
+glm.4 = glmer(repmean ~ 1 + AGE18 + I(AGE18^2) + (1 + AGE18 + I(AGE18^2)|ID2), data = dat, family = binomial(link = "logit"))
+
+# test for covariates (does not converge)
+glm.5 = glmer(repmean ~ 1 + AGE18 + I(AGE18^2) + 
+                MALE + TABLET + AGE18:MALE + AGE18:TABLET +(1|ID2), data = dat, 
+              family = binomial(link = "logit"))
+
+
+
+dat$rep_meanyhat = predict(glm.2, newdata=dat, re.form = NA )
+
+R = cor(x = dat$rep_meanyhat, 
+        y =dat$repmean, use = "complete.obs")
+
+R^2 # 27.14 %
+
+# random effects: https://stats.stackexchange.com/questions/128750/residual-variance-for-glmer
+summary(glm.0)
+residvar = (pi^2)/3
+intvar =  0.3656
+totalvar = residvar + intvar
+intvar/totalvar
+
+totalvar = 0.3656^2 + ((pi^2)/3) # RE of intercept, plus the total variance of logistic distribution = 0.1
+
+intvar/totalvar
+icc(glm.0, adjusted = FALSE) # .1
+
+
+
+
+# Fixed effects 
+summary(glm.2)
+e = 2.71828
+int = e^-1.228808 # intercept = .29
+e^-0.235780 # decreases by factor of .78
+.29 *  0.7899546 # = .22 (23% reduction ... same as beta weight)
+
+.29*0.235780 # 23% of intercept is .07 ... so you can convert this way
+
+# ranef interecept = 1.572
+ran = ranef(glm.2)$ID2
+mean(ran$`(Intercept)`) # random effect does not have mena of 0 like in linear model. mean = .11
+test = e^ran$`(Intercept)` # average = 1.5
+
+
+```
+
+### Rep - Figures 
+```{r}
+lmer.6 = lmer(REP_ETA1~ 1  + AGE18+  MALE +
+                 AGE18*MALE +  ( 1 +AGE18 |ID2), data = dat, REML = FALSE)
+
+glm.2 = glmer(repmean ~ 1 + AGE18 + I(AGE18^2) + (1|ID2), data = dat, family = binomial(link = "logit"))
+
+# type='terms' gives response on linear scale
+# type ='response' gives response on natural scale 
+dat$rep_ymean = predict(glm.2, newdat = dat, type = 'response')   # gives probability (confirmed)
+
+
+# 1/(1+e^(intercept_beta + age_beta*age)) # would put it in probability scale 
+
+# PLOT THE RAW MEAN, with model estimated probability overlayed 
+p1 = ggplot(data = dat, aes(x = AGE, y = repmean)) + 
+  geom_jitter(alpha = .4, color = 'indianred') + 
+  geom_smooth(aes(y = rep_ymean), color = 'black') + 
+  ylab('Repetitive Motor - Raw Mean Scores') +
+  xlab('Age (months)')  +
+  scale_y_continuous(limits = c(mean(plot_dat$repmean) - 2.5*sd(plot_dat$repmean),
+                               mean(plot_dat$repmean) + 2.5*sd(plot_dat$repmean))) +
+  theme_bw() + 
+  theme(text = element_text(size=16)) +
+  scale_x_continuous(breaks = seq(9, 36,3))
+
+
+dat$rep_yhat_eta = predict(lmer.6, newdat = dat)   
+
+p2 = ggplot(data = dat, aes(x = AGE, y = REP_ETA1)) + 
+  geom_jitter(alpha = .4, color = 'indianred') + 
+  geom_smooth(aes(y = rep_yhat_eta),color = 'black') + 
+  ylab('Repetitive Motor - MNFLA Scores') +
+  xlab('Age (months)') +
+  scale_y_continuous(limits = c(mean(dat$REP_ETA1) - 2.5*sd(dat$REP_ETA1),
+                                mean(dat$REP_ETA1) + 2.5*sd(dat$REP_ETA1))) +
+  theme_bw() + 
+  theme(text = element_text(size=16)) + 
+  scale_x_continuous(breaks = seq(9, 36,3))
+
+ggsave(p1, filename = '/Users/sifre002/Box/sifre002/11_Figures/Longit_RBS_MS/model_rep_mean.jpg', height = 4, width=7)
+ggsave(p2, filename = '/Users/sifre002/Box/sifre002/11_Figures/Longit_RBS_MS/model_rep_eta.jpg', height = 4, width=7)
+
+dat$male2 = ifelse(dat$MALE == 1, "Male", "Female")
+dat$male2 = as.factor(dat$male2)
+p3= ggplot(data = dat, aes(x = AGE, y = REP_ETA1, group_by(male2)), color =male2) + 
+  geom_smooth(aes(y = rep_yhat_eta, color = male2)) + 
+  ylab('Repetitive Motor - MNFLA Scores') +
+  xlab('Age (months)') +
+  scale_y_continuous(limits = c(mean(dat$REP_ETA1) - 2.5*sd(dat$REP_ETA1),
+                                mean(dat$REP_ETA1) + 2.5*sd(dat$REP_ETA1))) +
+  theme_bw() + 
+  theme(text = element_text(size=16)) + 
+  scale_x_continuous(breaks = seq(9, 36,3))
+ggsave(p3, filename = '/Users/sifre002/Box/sifre002/11_Figures/Longit_RBS_MS/model_rep_eta_sexinteraction.jpg', height = 4, width=7)
+
+```
+
+
+## Self-directed
+### Self-Dir - Factor scores 
+```{r}
+#########################################
+# Model SELF-DIR (MNLFA)
+#########################################
+# 1. Functional form - Fixed effects 
+lmer.0=lmer(SELF_ETA1~ 1  +( 1|ID2), data = dat, REML = FALSE)
+lmer.1=lmer(SELF_ETA1~ 1  + AGE18+ ( 1|ID2), data = dat, REML = FALSE)
+lmer.2=lmer(SELF_ETA1~ 1  + AGE18+ I(AGE18^2) + ( 1 |ID2), data = dat, REML = FALSE)
+mynames <- as.character (c("lmer.0", "lmer.1", "lmer.2")) # model numbers as characters
+myaicc  <- ICtab(logLik(lmer.0),
+                 logLik(lmer.1),
+                 logLik(lmer.2),
+                 type ="AICc",
+                 nobs = nrow(na.omit(dat)),
+                 weights =TRUE,delta =TRUE,sort=TRUE,mnames=mynames,base=TRUE)
+myaicc
+# Lmer.1 is marginally better than lmer.2. Select 1 bc it is more parsimonious & fits better.
+
+# 2. Test random effect of age 
+lmer.1=lmer(SELF_ETA1~ 1  + AGE18+ ( 1|ID2), data = dat, REML = FALSE)
+lmer.1b=lmer(SELF_ETA1~ 1  + AGE18+ ( 1 + AGE18|ID2), data = dat, REML = FALSE)
+mynames <- as.character (c("lmer.1", "lmer.1b")) # model numbers as characters
+myaicc  <- ICtab(logLik(lmer.1),
+                 logLik(lmer.1b),
+                 type ="AICc",
+                 nobs = nrow(na.omit(dat)),
+                 weights =TRUE,delta =TRUE,sort=TRUE,mnames=mynames,base=TRUE)
+myaicc # Adding RE of age does not improve model fit 
+
+# Check covariates & their interaction w. age 
+lmer.2=lmer(SELF_ETA1~ 1  + AGE18+ MALE + TABLET  + 
+              AGE18*MALE + AGE18*TABLET + ( 1|ID2), data = dat, REML = FALSE)
+mynames <- as.character (c("lmer.1", "lmer.2")) # model numbers as characters
+myaicc  <- ICtab(logLik(lmer.1),
+                 logLik(lmer.2),
+                 type ="AICc",
+                 nobs = nrow(na.omit(dat)),
+                 weights =TRUE,delta =TRUE,sort=TRUE,mnames=mynames,base=TRUE)
+myaicc # Adding covariates does not improve model fit 
+
+
+dat$self_yhat = predict(lmer.2, newdata=dat, re.form = NA )
+R = cor(x = dat$self_yhat, 
+        y =dat$SELF_ETA1, use = "complete.obs")
+
+R^2 
+
+# 5. scale on w/in person variance 
+l1_sd = sqrt(0.5903)#  l1-var from random intercept model (lmer.0)
+age_eff = -0.056794 # lmer.1
+mo_8 =  -10*age_eff # For a ten unique DECREASE in age (to get to 8 mos)
+mo_37 =  19*age_eff
+(mo_37-mo_8) / l1_sd
+
+
+```
+
+### Self-Dir - Raw Mean
+```{r}
+lmer.0 = lmer(selfmean~ 1  +( 1|ID2), data = dat, REML = FALSE)
+
+glm.0 = glmer(selfmean ~ 1 + (1|ID2), data = dat, family = binomial(link = "logit"))
+glm.1 = glmer(selfmean ~ 1 + AGE18 + (1|ID2), data = dat, family = binomial(link = "logit"))
+glm.2 = glmer(selfmean ~ 1 + AGE18 + I(AGE18^2) + (1|ID2), data = dat, family = binomial(link = "logit")) # did not converge 
+
+mynames <- as.character (c("glm.0", "glm.1")) # model numbers as characters
+
+myaicc  <- ICtab(logLik(glm.0),
+                 logLik(glm.1),
+                 type ="AICc",
+                 nobs = nrow(na.omit(dat)),
+                 weights =TRUE,delta =TRUE,sort=TRUE,mnames=mynames,base=TRUE)
+myaicc
+
+glm.1b=glmer(selfmean ~ 1 + AGE18 + (1+AGE18|ID2), data = dat, family = binomial(link = "logit"))
+mynames <- as.character (c("glm.1", "glm.1b")) # model numbers as characters
+
+myaicc  <- ICtab(logLik(glm.1),
+                 logLik(glm.1b),
+                 type ="AICc",
+                 nobs = nrow(na.omit(dat)),
+                 weights =TRUE,delta =TRUE,sort=TRUE,mnames=mynames,base=TRUE)
+myaicc
+
+glm.2=glmer(selfmean ~ 1 + AGE18 + 
+              MALE + TABLET + AGE18*TABLET + AGE18*MALE+(1+AGE18|ID2), data = dat, family = binomial(link = "logit"))
+
+
+
+```
+
+### Self-Dir - Figures
+```{r}
+glm.1b=glmer(selfmean ~ 1 + AGE18 + (1+AGE18|ID2), data = dat, family = binomial(link = "logit"))
+lmer.1=lmer(SELF_ETA1~ 1  + AGE18+ ( 1|ID2), data = dat, REML = FALSE)
+
+dat$self_yhat_mean = predict(glm.1b, newdat = dat, type = 'response')   # gives probability (confirmed)
+dat$self_yhat_eta = predict(lmer.1, newdat = dat)
+
+# ETA
+p1 = ggplot(data = dat, aes(x = AGE, y = SELF_ETA1)) + 
+  geom_jitter(alpha = .4, color = 'indianred') + 
+  geom_smooth(aes(y = self_yhat_eta), color = 'black') + 
+  ylab('Self-directed Factor Scores') +
+  xlab('Age (months)') +
+  theme_bw() + 
+  theme(text = element_text(size=16)) + 
+  scale_y_continuous(limits = c(mean(dat$SELF_ETA1) -3*sd(dat$SELF_ETA1),
+                                mean(dat$SELF_ETA1) + 3*sd(dat$SELF_ETA1))) +
+  theme_bw() + 
+  theme(text = element_text(size=16)) + 
+  scale_x_continuous(breaks = seq(9, 36,3))
+
+
+
+p2 = ggplot(data = dat, aes(x = AGE, y = selfmean)) + 
+  geom_jitter(alpha = .4, color = 'indianred') + 
+  geom_smooth(aes(y = self_yhat_mean),color = 'black') + 
+  ylab('Self-directed  Mean Scores') +
+  xlab('Age (months)') +
+  theme_bw() + 
+  theme(text = element_text(size=16)) +
+  scale_y_continuous(limits = c(mean(dat$selfmean) - 3*sd(dat$selfmean),
+                                mean(dat$selfmean) + 3*sd(dat$selfmean))) +
+  theme_bw() + 
+  theme(text = element_text(size=16)) + 
+  scale_x_continuous(breaks = seq(9, 36,3))
+
+
+ggsave(p1, filename = '/Users/sifre002/Box/sifre002/11_Figures/Longit_RBS_MS/model_self_eta.jpg', height = 4, width=7)
+ggsave(p2, filename = '/Users/sifre002/Box/sifre002/11_Figures/Longit_RBS_MS/model_self_mean.jpg', height = 4, width=7)
+
+```
+
+## Higher-order
+### Higher - Factor scores 
+```{r}
+#########################################
+# Model HIGHER-ORDER (MNLFA)
+#########################################
+# 1. Functional form - Fixed effects 
+lmer.0=lmer(RIT_RES_ETA1~ 1  +( 1|ID2), data = dat, REML = FALSE)
+lmer.1=lmer(RIT_RES_ETA1~ 1  + AGE18+ ( 1|ID2), data = dat, REML = FALSE)
+lmer.2=lmer(RIT_RES_ETA1~ 1  + AGE18+ I(AGE18^2) + ( 1 |ID2), data = dat, REML = FALSE)
+mynames <- as.character (c("lmer.0", "lmer.1", "lmer.2")) 
+myaicc  <- ICtab(logLik(lmer.0),
+                 logLik(lmer.1),
+                 logLik(lmer.2),
+                 type ="AICc",
+                 nobs = nrow(na.omit(dat)),
+                 weights =TRUE,delta =TRUE,sort=TRUE,mnames=mynames,base=TRUE)
+myaicc # Quadratic effect of age significant improves model fit 
+# 2. Test for random effects 
+lmer.3=lmer(RIT_RES_ETA1~ 1  + AGE18+ I(AGE18^2) + ( 1 + AGE18 |ID2), data = dat, REML = FALSE)
+lmer.4=lmer(RIT_RES_ETA1~ 1  + AGE18+ I(AGE18^2) + ( 1  + AGE18 + I(AGE18^2)|ID2), data = dat, REML = FALSE) # failed to converge - not a candidate model
+mynames <- as.character (c("lmer.2", "lmer.3")) # model numbers as characters
+myaicc  <- ICtab(logLik(lmer.2),
+                 logLik(lmer.3),
+                 type ="AICc",
+                 nobs = nrow(na.omit(dat)),
+                 weights =TRUE,delta =TRUE,sort=TRUE,mnames=mynames,base=TRUE)
+myaicc # adding RE of age signigicantly improves model fit 
+
+# Test covariates, and interaction with linear & quadratic age 
+lmer.4=lmer(RIT_RES_ETA1~ 1  + AGE18+ I(AGE18^2) + MALE + TABLET +
+              AGE18*MALE + AGE18*TABLET + 
+               I(AGE18^2)*MALE +  I(AGE18^2)*TABLET+
+              ( 1 + AGE18 |ID2), data = dat, REML = FALSE)
+# No sig interactions with quadratic effect. No main effect of cohort, or interaction. Only keep male, and interactoin with linear age 
+lmer.5 = lmer(RIT_RES_ETA1~ 1  + AGE18+ I(AGE18^2) + MALE +
+              AGE18*MALE  + ( 1 + AGE18 |ID2), data = dat, REML = FALSE)
+mynames <- as.character (c("lmer.3", "lmer.4", "lmer.5")) # model numbers as characters
+myaicc  <- ICtab(logLik(lmer.3),
+                 logLik(lmer.4),
+                 logLik(lmer.5),
+                 type ="AICc",
+                 nobs = nrow(na.omit(dat)),
+                 weights =TRUE,delta =TRUE,sort=TRUE,mnames=mynames,base=TRUE)
+myaicc # We pick lmer.5 (includes interactoin with linear age and cohort)
+
+# Random effect
+logLik(lmer.2)
+logLik(lmer.3)
+anova(lmer.3, lmer.2)
+
+# Pseudo-R^2
+dat$resrit_yhat_eta = predict(lmer.5, newdat = dat)
+R = cor(x = dat$resrit_yhat_eta, 
+        y =dat$RIT_RES_ETA1, use = "complete.obs")
+R^2 
+r2(lmer.5)
+
+summary(lmer.1b)
+
+l1_sd = sqrt(0.4107)#  l1-var from random intercept model
+age_eff = -1.731e-03 # quadratic age eff
+mo_18 = 9.697e-02 # Intercept 
+mo_37 =  19*age_eff
+(mo_37-mo_18) / l1_sd
+
+```
+
+### Higher - raw mean 
+```{r}
+glm.0 = glmer(resritmean ~ 1 + (1|ID2), data = dat, family = binomial(link = "logit"))
+glm.1 = glmer(resritmean ~ 1 + AGE18 + (1|ID2), data = dat, family = binomial(link = "logit"))
+glm.2 = glmer(resritmean ~ 1 + AGE18 + I(AGE18^2) + (1|ID2), data = dat, family = binomial(link = "logit"))
+
+mynames <- as.character (c("glm.0", "glm.1", "glm.2")) # model numbers as characters
+
+myaicc  <- ICtab(logLik(glm.0),
+                 logLik(glm.1),
+                 logLik(glm.2),
+                 type ="AICc",
+                 nobs = nrow(na.omit(dat)),
+                 weights =TRUE,delta =TRUE,sort=TRUE,mnames=mynames,base=TRUE)
+myaicc
+
+summary(glm.0)
+
+# test for  covariates 
+glm.3 =  glmer(resritmean ~ 1 + MALE + TABLET+ (1|ID2), data = dat, family = binomial(link = "logit"))
+mynames <- as.character (c("glm.0", "glm.3")) # model numbers as characters
+
+myaicc  <- ICtab(logLik(glm.0),
+                 logLik(glm.3),
+                 type ="AICc",
+                 nobs = nrow(na.omit(dat)),
+                 weights =TRUE,delta =TRUE,sort=TRUE,mnames=mynames,base=TRUE)
+myaicc
+
+
+```
+
+### Higher - Figures
+```{r}
+glm.0 = glmer(resritmean ~ 1 + (1|ID2), data = dat, family = binomial(link = "logit"))
+lmer.5 = lmer(RIT_RES_ETA1~ 1  + AGE18+ I(AGE18^2) + MALE +
+              AGE18*MALE + ( 1 + AGE18 |ID2), data = dat, REML = FALSE)
+
+dat$resrit_yhat_mean = predict(glm.0, newdat = dat, type = 'response')   # gives probability (confirmed)
+dat$resrit_yhat_eta = predict(lmer.3, newdat = dat)
+
+# ETA
+
+p1 = ggplot(data = dat, aes(x = AGE, y = RIT_RES_ETA1)) + 
+  geom_jitter(alpha = .4, color = 'indianred') + 
+  geom_smooth(aes(y = resrit_yhat_eta), color = 'black') + 
+  ylab('Higher-order Factor Scores') +
+  xlab('Age (months)') +
+  theme_bw() + 
+  theme(text = element_text(size=16)) + 
+  scale_y_continuous(limits = c(mean(dat$RIT_RES_ETA1) -4*sd(dat$RIT_RES_ETA1),
+                                mean(dat$RIT_RES_ETA1) + 4*sd(dat$RIT_RES_ETA1))) +
+  theme_bw() + 
+  theme(text = element_text(size=16)) + 
+  scale_x_continuous(breaks = seq(9, 36,3))
+
+
+
+
+p2 = ggplot(data = dat, aes(x = AGE, y = resritmean)) + 
+  geom_jitter(alpha = .4, color = 'indianred') + 
+  geom_smooth(aes(y = resrit_yhat_mean),color = 'black') + 
+  ylab('Higher-order Mean Scores') +
+  xlab('Age (months)') +
+  theme_bw() + 
+  theme(text = element_text(size=16)) +
+  scale_y_continuous(limits = c(mean(dat$resritmean) - 4*sd(dat$resritmean),
+                                mean(dat$resritmean) + 4*sd(dat$resritmean))) +
+  theme_bw() + 
+  theme(text = element_text(size=16)) + 
+  scale_x_continuous(breaks = seq(9, 36,3))
+
+p3 = ggplot(data = dat, aes(x = AGE, y = RIT_RES_ETA1, group_by(male2), color = male2)) +
+  geom_smooth(aes(y = resrit_yhat_eta)) + 
+  ylab('Higher-order Factor Scores') +
+  xlab('Age (months)') +
+  theme_bw() + 
+  theme(text = element_text(size=16)) + 
+  scale_y_continuous(limits = c(mean(dat$RIT_RES_ETA1) -4*sd(dat$RIT_RES_ETA1),
+                                mean(dat$RIT_RES_ETA1) + 4*sd(dat$RIT_RES_ETA1))) +
+  theme_bw() + 
+  theme(text = element_text(size=16)) + 
+  scale_x_continuous(breaks = seq(9, 36,3))
+
+ggsave(p1, filename = '/Users/sifre002/Box/sifre002/11_Figures/Longit_RBS_MS/model_resrit_eta.jpg', height = 4, width=7)
+ggsave(p2, filename = '/Users/sifre002/Box/sifre002/11_Figures/Longit_RBS_MS/model_resrit_mean.jpg', height = 4, width=7)
+ggsave(p3, filename = '/Users/sifre002/Box/sifre002/11_Figures/Longit_RBS_MS/model_resrit_etasexinteraction.jpg', height = 4, width=7)
+
+
+
+```
+
+
+
