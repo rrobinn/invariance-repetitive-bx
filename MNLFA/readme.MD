@@ -3,7 +3,7 @@ MNLFA for the RBS-EC was performed using the aMNLFA package in R (https://cran.r
 
 The authors made slight modifications to the package functions (e.g. allowed user to enter specific calibration sample for aMNLFA_sample.R) which are included in this folder.  
 
-The steps for MNLFA are outlined in <b>aMNLFA_RBS.R</b>. Broadly, they are as follows:
+The steps for MNLFA are outlined in <b>aMNLFA_RBS.R</b>. Broadly, they are as follows:  
 <b> 1. Define MNLFA object </b>. For each subscale, state which indicators are included, which moderators to  test, etc.  
 <b> 2. Generate item plots as a function of potential moderators. </b>  
 <b> 3. Draw a calibratoin sample </b>.  The authors selected calibration samples to ensure similar age distributions across both samples (see find_balanced_sample.R).  
