@@ -121,7 +121,3 @@ colnames(ru2)[1] = 'ru'
 ru3 = data.frame(ru3)
 colnames(ru3)[1] = 'ru'
 
-# Save a few calibration samples
-write_csv(ru1, '/Users/sifre002/Desktop/Invariance/calib_sample1.csv')
-write_csv(ru2, '/Users/sifre002/Desktop/Invariance/calib_sample2.csv')
-write_csv(ru3, '/Users/sifre002/Desktop/Invariance/calib_sample3.csv')
