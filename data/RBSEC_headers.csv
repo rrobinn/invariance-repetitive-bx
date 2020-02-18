@@ -1,0 +1,51 @@
+﻿Var name,description
+AGE,Age (months)
+REP1,Repetitive motor items
+REP2,Repetitive motor items
+REP3,Repetitive motor items
+REP4,Repetitive motor items
+REP5,Repetitive motor items
+REP6,Repetitive motor items
+REP7,Repetitive motor items
+REP8,Repetitive motor items
+REP9,Repetitive motor items
+SELF1,Self directed items
+SELF2,Self directed items
+SELF3,Self directed items
+SELF4,Self directed items
+SELF5,Self directed items
+SELF6,Self directed items
+SELF7,Self directed items
+RES1,Higher order items
+RES2,Higher order items
+RES3,Higher order items
+RES4,Higher order items
+RES5,Higher order items
+RES6,Higher order items
+RES7,Higher order items
+RES8,Higher order items
+RIT1,Higher order items
+RIT2,Higher order items
+RIT3,Higher order items
+RIT4,Higher order items
+RIT5,Higher order items
+RIT6,Higher order items
+RIT7,Higher order items
+RIT8,Higher order items
+RIT9,Higher order items
+RIT10,Higher order items
+PROJECT,Project/cohort
+SEX,Sex of participant
+TABLET,Dummy variable indicating cohort=tablet
+BSLERP,Dummy variable indicating cohort=bslerp
+MALE,Dummy variable indicating sex=male
+AGER,Rounded age (used for item plots)
+AGE18,Age centered at 18 months (in months)
+AGE18YR,Age centered at 18 months (in years)
+AGE18YR2,Quadratic age centered at 18 months (in years)
+AGEYR,Age (years)
+AGESEX1,Age x Sex
+AGESEX2,Age^2 x Sex
+AGEXTAB,Age x  Cohort
+AGE2XTAB,Age^2 x Cohort
+ID2,ID coded as numeric
