@@ -1,5 +1,5 @@
 # Code calls functions from aMNLFA.R 
-#Note: Robin Sifre made some changes to the
+# Note: Robin Sifre made some changes to the
 # functions. Some were substantive changes (e.g. changing how family-wise error
 # was adjusted for), and some were fixing some bugs that was causing the package
 # to crash
@@ -17,18 +17,20 @@ library(dplyr)
 # Setting paths & reading in data 
 ####################################################
 # Set directory to where script will output mplus files.
-wd <- '/Users/sifre002/Desktop/Invariance/CalibSample3/REP_FIXED/'
+wd <- '/Users/sifre002/Desktop/Invariance/CalibSample1/REP/'
 setwd(wd)
 # Read in cleaned RBS-EC data 
 df <- read.csv("/Users/sifre002/Desktop/Invariance/2019-09-05_NOBAB_cleanData_MNLFA.csv",
                header=TRUE)
 homedir = '/Users/sifre002/Box/sifre002/18-Organized-Code/invariance-repetitive-bx/MNLFA/'
-# For reproducibility, read in calib_sample
-ru = read.csv('/Users/sifre002/Desktop/Invariance/CalibSample3/calib_sample3.csv')
+
+# For reproducibility, read in previously-generated calib_sample
+ru = read.csv('/Users/sifre002/Desktop/Invariance/CalibSample3/calib_sample1.csv')
 ru = data.frame(ru)
 
 ####################################################
-# 1.	Define aMNLFA object (aMNLFA.object) 
+# 1.	Define aMNLFA objects (aMNLFA.object) 
+# Comment out subscale that is not currently being run. 
 ####################################################
 # Repetitive motor 
  ob <-aMNLFA.object(dir          = wd, # , indicate the location of the data.
@@ -46,7 +48,6 @@ ru = data.frame(ru)
                                      "TABLET", "MALE",
                                      "AGEXTAB"), # List variables to be included in tests for measurement non-invariance.
                    factors       = c("PROJECT"),
-                   #auxiliary = 'ID', # List all variables that should be included to identify each case in long file.
                    ID            = "ID2",
                    thresholds    = TRUE) # indicate whether you would like to test measurement invariance of thresholds for ordinal indicators.
 
@@ -66,7 +67,6 @@ ob <-aMNLFA.object(dir          = wd, # , indicate the location of the data.
                                     "TABLET",
                                     "AGEXTAB", "MALE"), # List variables to be included in tests for measurement non-invariance.
                   factors       = c("PROJECT"),
-                  #auxiliary = 'ID', # List all variables that should be included to identify each case in long file.
                   ID            = "ID2",
                   thresholds    = TRUE) # indicate whether you would like to test measurement invariance of thresholds for ordinal indicators.
 
@@ -88,7 +88,6 @@ ob <-aMNLFA.object(dir          = wd, # , indicate the location of the data.
                                      "TABLET",
                                      "AGEXTAB", "MALE"),
                    factors       = c("PROJECT", "SEX"),
-                   #auxiliary = 'ID', # List all variables that should be included to identify each case in long file.
                    ID            = "ID2",
                    thresholds    = TRUE) # indicate whether you would like to test measurement invariance of thRITholds for ordinal indicators.
 
@@ -103,8 +102,10 @@ aMNLFA.itemplots(ob)
 #################################################### 
 source(paste(homedir, 'aMNLFA_sample.R', sep=''))
 aMNLFA.sample(ob,ru)
-
-# Optional code - used for adding manual additions to MPLUS script (e.g. constraining variance so model would converge)
+#################################################### 
+# Optional code - used for adding manual additions to MPLUS script 
+# (e.g. constraining variance of moderators so model would converge)
+#################################################### 
 #calib.dat <- read.delim("/Users/sifre002/Desktop/Invariance/CalibSample2/REP_FIXED/calibration.dat", header=FALSE)
 #vars = read.csv("/Users/sifre002/Desktop/Invariance/CalibSample2/REP_FIXED/vars.csv", header=TRUE)
 #vars = vars$x
@@ -116,7 +117,6 @@ aMNLFA.sample(ob,ru)
 # 4.	Create Mplus input files for mean impact, variance impact, 
 # and item-by-item measurement non-invariance (aMNLFA.initial)
 ####################################################
-# creates mrdata in here. need to save manually 
 source(paste(homedir, 'aMNLFA_initial.R', sep =''))
 aMNLFA.initial(ob) 
 
