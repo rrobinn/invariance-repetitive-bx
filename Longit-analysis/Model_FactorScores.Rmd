@@ -53,6 +53,17 @@ dat$TABLET = as.factor(dat$TABLET)
 dat$AGE = dat$AGE18 + 18
 ```
 
+
+```{r}
+# Cohort and male/female breakdown
+# Cohort A
+dat %>%
+  group_by(TABLET, MALE) %>%
+  summarize(n=n_distinct(ID2))
+
+```
+
+
 # Plot distributions
 ## Composite RBS-EC scores
 Distribution of Composite RBS-EC scores (n=606). All 34 items included. Mean = `r round(mean(dat$comp_items, na.rm = TRUE),2)`, SD = `r round(sd(dat$comp_items, na.rm=TRUE),2)`.
