@@ -34,7 +34,7 @@ library(ggplot2)
 ```{r, cache = TRUE}
 # Read data 
 dat = read.csv('/Users/sifre002/Box/sifre002/9_ExcelSpreadsheets/Longitudinal_RBSEC/data_plus_scores.csv')
-rawdat = read.csv('/Users/sifre002/Box/sifre002/9_ExcelSpreadsheets/Longitudinal_RBSEC/2019-09-05_NOBAB_cleanData_MNLFA.csv')
+rawdat = read.csv('/Users/sifre002/Box/sifre002/9_ExcelSpreadsheets/Longitudinal_RBSEC/2019-09-05_NOBAB_cleanData_MNLFA.csv') 
 
 # raw composite sum (used in plot below)
 comp = rawdat %>%
@@ -56,11 +56,9 @@ dat$AGE = dat$AGE18 + 18
 
 ```{r}
 # Cohort and male/female breakdown
-# Cohort A
 dat %>%
   group_by(TABLET, MALE) %>%
   summarize(n=n_distinct(ID2))
-
 ```
 
 
@@ -75,8 +73,6 @@ p1 = ggplot(data = dat, aes(x = comp_items)) +
   ylab('Frequency') +
   theme(text = element_text(size=16)) +
   theme_bw()
-# ggsave(plot = p1, filename=  '/Users/sifre002/Box/sifre002/11_Figures/Longit_RBS_MS/hist_composite.jpg', height = 6, width = 6.5)
-p1
 ```
 
 ## Subscales
@@ -108,11 +104,6 @@ p2 = ggplot(data = dat, aes(x = as.numeric(repmean))) +
 
 p3 = gridExtra::grid.arrange(p1, p2, nrow = 2)
 p3
-# ggsave(plot = p3, filename=  '/Users/sifre002/Box/sifre002/11_Figures/Longit_RBS_MS/rephistograms.jpg', height = 6.5, width = 6)
-
-# ggsave(plot = p1, filename=  '/Users/sifre002/Box/sifre002/11_Figures/Longit_RBS_MS/hist_rep_eta.jpg', height = 6, width = 6.5)
-# ggsave(plot = p2, filename=  '/Users/sifre002/Box/sifre002/11_Figures/Longit_RBS_MS/hist_rep_raw.jpg', height = 6, width = 6.5)
-
 # SELF 
 p1 = ggplot(data = dat, aes(x = SELF_ETA1)) + 
     geom_histogram(color = 'black', binwidth =0.5,
@@ -124,9 +115,6 @@ p1 = ggplot(data = dat, aes(x = SELF_ETA1)) +
   xlab('Self-directed (Factor Scores)') +
   scale_x_continuous(limits = c(-3, 3), breaks = seq(-3,3,0.5)) +
   theme_bw() +theme(text = element_text(size=16))
-  
-# ggsave(plot = p1, filename=  '/Users/sifre002/Box/sifre002/11_Figures/Longit_RBS_MS/hist_self_eta.jpg', height = 6, width = 6.5)
-
 p2 = ggplot(data = dat, aes(x =selfmean)) + 
   geom_histogram(color = 'black',  binwidth = .2,
                  aes(y = ..density..) ) +
@@ -139,10 +127,6 @@ p2 = ggplot(data = dat, aes(x =selfmean)) +
   theme_bw() +theme(text = element_text(size=16))
 p3 = gridExtra::grid.arrange(p1, p2, nrow = 2)
 p3
-# ggsave(plot = p3, filename=  '/Users/sifre002/Box/sifre002/11_Figures/Longit_RBS_MS/selfhistograms.jpg', height = 6.5, width = 6)
-
-# ggsave(plot = p2, filename=  '/Users/sifre002/Box/sifre002/11_Figures/Longit_RBS_MS/hist_self_mean.jpg', height = 6, width = 6.5)
-
 
 p1 = ggplot(data = dat, aes(x = as.numeric(RIT_RES_ETA1))) + 
   geom_histogram(color = 'black', binwidth = 0.5,
@@ -169,8 +153,6 @@ p2= ggplot(data = dat, aes(x = as.numeric(resritmean))) +
   theme(text = element_text(size=16))
 p3 = gridExtra::grid.arrange(p1, p2, nrow = 2)
 p3
-# ggsave(plot = p3, filename=  '/Users/sifre002/Box/sifre002/11_Figures/Longit_RBS_MS/higherorderhitograms.jpg', height = 6.5, width = 6)
-
 ```
 
 
@@ -264,7 +246,6 @@ age_eff = -0.109913 # summary(lmer.1)
 mo_18 =  0.039220 # intercept
 mo_8 =  -10*age_eff # For a ten unique DECREASE in age (to get to 8 mos)
 mo_37 =  19*age_eff
-
 
 ```
 Pseudo-r2 of final model= `r R^2`    
