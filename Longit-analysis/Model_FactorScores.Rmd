@@ -33,24 +33,8 @@ library(ggplot2)
 
 ```{r, cache = TRUE}
 # Read data 
-dat = read.csv('/Users/sifre002/Box/sifre002/9_ExcelSpreadsheets/Longitudinal_RBSEC/data_plus_scores.csv')
-rawdat = read.csv('/Users/sifre002/Box/sifre002/9_ExcelSpreadsheets/Longitudinal_RBSEC/2019-09-05_NOBAB_cleanData_MNLFA.csv') 
-
-# raw composite sum (used in plot below)
-comp = rawdat %>%
-  dplyr::select(REP1:RIT10) %>%
-  rowSums
-dat$comp_items = comp
-
-# add project and sex information 
-rawdat = rawdat %>%
-  dplyr::select(ID2, BSLERP, TABLET, MALE, PROJECT)
-rawdat = distinct(rawdat, ID2, .keep_all = TRUE)
-dat = merge(dat, rawdat, by = 'ID2', all.x = TRUE)
-dat$TABLET = ifelse(dat$PROJECT == 'tablet', 1,0)
-dat$BSLERP = ifelse(dat$PROJECT == 'BSLERP', 1,0)
-dat$TABLET = as.factor(dat$TABLET)
-dat$AGE = dat$AGE18 + 18
+setwd('invariance-repetitive-bx/') # change to the correct wdir
+dat = read.csv('data/mnlfa_output.csv')
 ```
 
 
